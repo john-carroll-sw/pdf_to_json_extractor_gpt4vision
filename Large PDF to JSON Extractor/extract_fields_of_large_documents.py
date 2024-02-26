@@ -16,11 +16,8 @@ from pathlib import Path
 from dotenv import load_dotenv
 
 
-# TODO genericize the env file
-# TODO add an option to create a schema in step 4 instead
-# TODO remove all LNR documents
-# TODO **Research how to handle batch size based on an estimate of the number of tokens in the images
 # TODO modularize the code, move the functions to a separate files based on processes; pdf_to_images, preprocess_images, images_to_markdown, generate_json_from_markdown_template
+# TODO **Research how to handle batch size based on an estimate of the number of tokens in the images
 '''
     Inspired by Matt Groff:
         https://groff.dev/blog/ingesting-pdfs-with-gpt-vision
@@ -452,6 +449,9 @@ def generate_json_from_markdown_template(final_markdown_file, json_output_file, 
     print(response.usage)
     update_token_usage(current_pdf_name, "GPT-4-Turbo 1106", "1", response.usage.prompt_tokens, response.usage.completion_tokens)
 
+    output_directory = os.path.dirname(json_output_file)
+    if not os.path.exists(output_directory):
+        os.makedirs(output_directory)
     with open(json_output_file, 'w', encoding='utf-8') as file:
         json.dump(json.loads(json_output), file, indent=4, ensure_ascii=False)
         print(f"JSON output saved to {json_output_file}")
@@ -557,7 +557,8 @@ def runner():
         image_files_directory = os.path.join(processing_output_folder, 'page_jpegs')
         markdown_files_directory = os.path.join(processing_output_folder, 'page_markdowns')
         final_markdown_path = os.path.join(processing_output_folder, pdf_name +'_markdown.md')
-        json_output_path = os.path.join(current_directory, pdf_name + '_JSON.json')
+        json_files_directory = os.path.join(current_directory, 'json_outputs')
+        json_output_path = os.path.join(json_files_directory, pdf_name + '_JSON.json')
 
         ### Process the PDF ###
         # 1) convert pdfs to images, (code)
@@ -569,7 +570,9 @@ def runner():
         # 3) images to markdown, (GPT-4 Vision to interpret and convert them into Markdown text.)
         process_images_to_markdown(image_folder=image_files_directory, markdown_folder=markdown_files_directory, final_markdown_file=final_markdown_path)
 
-        # 4) convert markdown to JSON output (GPT-4 Turbo JSON Mode to fill out the JSON sample using the markdown files.)
+        # 4) convert markdown to JSON output (GPT-4 Turbo JSON Mode to fill out the JSON schema using the markdown files.)
+        # If a schema is not provided, generate a JSON schema from the markdown
+        # generate_json_from_markdown_template(final_markdown_file=final_markdown_path, json_output_file=json_output_path)
         generate_json_from_markdown_template(final_markdown_file=final_markdown_path, json_output_file=json_output_path, schema_file=lease_schema_json_path)
         
         print(f"PDF {pdf_name} processing complete.")

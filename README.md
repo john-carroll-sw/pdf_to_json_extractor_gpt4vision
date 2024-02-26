@@ -1,4 +1,4 @@
-# GPT-4 Vision Field Extractor
+# GPT-4 Vision Field Extractor - Converts PDFs to JSON using schema
 
 This repository contains implementations of a field extractor for taking PDF documents to output JSON using OpenAI's GPT-4 Vision Preview.
 

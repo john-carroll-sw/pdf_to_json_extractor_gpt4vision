@@ -273,7 +273,8 @@ def process_images_to_markdown(image_folder="page_jpegs", markdown_folder="page_
         batch_images = images[i:i+batch_size]
         batch_number = i // batch_size + 1
         total_batches = (len(images) + batch_size - 1) // batch_size
-        print(f"Processing batch {batch_number} of {total_batches}. Batch size: {batch_size} images.")
+        num_images_in_batch = len(batch_images)
+        print(f"Processing batch {batch_number} of {total_batches}. Batch size({batch_size} max): {num_images_in_batch} images.")
         encoded_images = [encode_image_to_base64(str(image_path)) for image_path in batch_images]
         markdown_content = images_to_markdown(request_count, encoded_images)
 
@@ -535,7 +536,7 @@ def runner():
     current_directory = os.path.dirname(os.path.abspath(__file__)) # Configuration of paths
 
     # Lease Schema JSON
-    lease_schema_json_path = os.path.join(current_directory, 'document_schema_lease.json')
+    lease_schema_json_path = os.path.join(current_directory, 'document_schema.json')
 
     # PDF documents folder
     pdf_folder_name = "PDF Documents" # Folder containing the PDFs to be processed

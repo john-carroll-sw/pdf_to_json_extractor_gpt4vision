@@ -1,0 +1,109 @@
+{
+    "Military Police Traffic Accident Report": {
+        "PM Activity Code/Report No.": "",
+        "Date of Accident": "04/30",
+        "Time": "2315 HRS",
+        "Day of Collision": "Tuesday",
+        "Military Reservation": {
+            "Road or Street": "Thomas",
+            "Name and Location": "Ft. Blank, AL 36201",
+            "Intersecting Street": "N/A",
+            "Nearest Intersecting Highway": "38th St",
+            "Direction": "W",
+            "Section": "5"
+        },
+        "Accident Occurred Off Military Reservation and Outside City Limits": "No",
+        "Kind of Locality": "Troop Billets",
+        "Type Accident": "Vehicle-Vehicle",
+        "Severity": {
+            "Killed": "0",
+            "Injuries": "2",
+            "Hit & Run": "No"
+        },
+        "Vehicle": {
+            "Driving Lanes": "Two",
+            "Surface": "Concrete",
+            "Condition": "Dry",
+            "Weather": "Clear",
+            "Light": "Daylight"
+        },
+        "Traffic Control": {
+            "Stop & Go Signal": "No",
+            "Flashing Light": "No",
+            "Warning Sign": "No",
+            "One Way Street": "No",
+            "No Traffic Signal": "Yes",
+            "Solid Center Line": "Yes",
+            "Stop Sign": "Yes"
+        },
+        "Vehicle No. 1": {
+            "USA Registration or License No.": "CRB 847 (AL)",
+            "Make": "Chev",
+            "Year": "74",
+            "Body Type": "Camaro",
+            "Unit Markings/Decal No.": "BH 543 (RED)",
+            "Ownership": "Privately Owned",
+            "Registered Owner": {
+                "Name": "Percy, Clyde F. SSG",
+                "Address": "Co A, 3/60 INF. Ft. Blank AL, 36201"
+            },
+            "Insurance": {
+                "Company": "All Place Ins",
+                "Address": "Blank City, AL, 36201"
+            },
+            "Driver": {
+                "Name": "Percy, Helen R.",
+                "SSN": "405-13-7701",
+                "Address": "306 Hard Road, North Blank, AL. 36202",
+                "Age": "36",
+                "Sex": "Female",
+                "Driver's License/Permit Number": "0-43861524",
+                "State": "AL",
+                "Limitations on License/Permit": "No"
+            }
+        },
+        "Vehicle No. 2": {
+            "USA Registration or License No.": "69-7326 (GA)",
+            "Make": "Mercury",
+            "Year": "72",
+            "Body Type": "Cougar",
+            "Unit Markings/Decal No.": "CH 347 (GREEN)",
+            "Ownership": "Privately Owned",
+            "Registered Owner": "N/A",
+            "Insurance": {
+                "Company": "County Farm",
+                "Address": "Sopchoppy GA 3901"
+            },
+            "Driver": {
+                "Name": "Brown, Harvey G.",
+                "SSN": "262-92-1192",
+                "Address": "4237 Red Road, Halfway BA. 39055",
+                "Age": "18",
+                "Sex": "Female",
+                "Driver's License/Permit Number": "8-343-5373-7243",
+                "State": "GA",
+                "Limitations on License/Permit": "Yes (Specify) Corr Lenses"
+            }
+        },
+        "Occupants": {
+            "Name and Address": "Brown, Sally S., Same as Driver #2",
+            "State": "GA",
+            "Age": "34",
+            "Sex": "Female"
+        },
+        "Pedestrian": {
+            "Direction": "N/A",
+            "Details": "N/A"
+        },
+        "Witnesses": {
+            "Name and Address": "Smith, Harry Q., SP4",
+            "Telephone Number": "734-6410",
+            "Details": {
+                "Category": "Army Officer",
+                "Injury Class": "N/A",
+                "Shoulder/Lap Belts": "Shoulder Harness Used",
+                "Seat Position": "N/A"
+            }
+        }
+    }
+}

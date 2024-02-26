@@ -1,0 +1,61 @@
+Extractor Runner started at 2024-02-25 21:38:06.290045
+Processing PDF: convert-me-to-markdown
+Converting PDF to images with DPI=100...
+Page 1 saved as image: C:\Repositiories\report_text_extractor\Large PDF to JSON Extractor\processing_outputs\page_jpegs\Page_1.jpeg
+Page 2 saved as image: C:\Repositiories\report_text_extractor\Large PDF to JSON Extractor\processing_outputs\page_jpegs\Page_2.jpeg
+Page 3 saved as image: C:\Repositiories\report_text_extractor\Large PDF to JSON Extractor\processing_outputs\page_jpegs\Page_3.jpeg
+Page 4 saved as image: C:\Repositiories\report_text_extractor\Large PDF to JSON Extractor\processing_outputs\page_jpegs\Page_4.jpeg
+Page 5 saved as image: C:\Repositiories\report_text_extractor\Large PDF to JSON Extractor\processing_outputs\page_jpegs\Page_5.jpeg
+Page 6 saved as image: C:\Repositiories\report_text_extractor\Large PDF to JSON Extractor\processing_outputs\page_jpegs\Page_6.jpeg
+Page 7 saved as image: C:\Repositiories\report_text_extractor\Large PDF to JSON Extractor\processing_outputs\page_jpegs\Page_7.jpeg
+Page 8 saved as image: C:\Repositiories\report_text_extractor\Large PDF to JSON Extractor\processing_outputs\page_jpegs\Page_8.jpeg
+Page 9 saved as image: C:\Repositiories\report_text_extractor\Large PDF to JSON Extractor\processing_outputs\page_jpegs\Page_9.jpeg
+Processing images in the directory: C:\Repositiories\report_text_extractor\Large PDF to JSON Extractor\processing_outputs\page_jpegs
+Preprocessing image for OCR: C:\Repositiories\report_text_extractor\Large PDF to JSON Extractor\processing_outputs\page_jpegs\Page_1.jpeg
+Preprocessing image for OCR: C:\Repositiories\report_text_extractor\Large PDF to JSON Extractor\processing_outputs\page_jpegs\Page_2.jpeg
+Preprocessing image for OCR: C:\Repositiories\report_text_extractor\Large PDF to JSON Extractor\processing_outputs\page_jpegs\Page_3.jpeg
+Preprocessing image for OCR: C:\Repositiories\report_text_extractor\Large PDF to JSON Extractor\processing_outputs\page_jpegs\Page_4.jpeg
+Preprocessing image for OCR: C:\Repositiories\report_text_extractor\Large PDF to JSON Extractor\processing_outputs\page_jpegs\Page_5.jpeg
+Preprocessing image for OCR: C:\Repositiories\report_text_extractor\Large PDF to JSON Extractor\processing_outputs\page_jpegs\Page_6.jpeg
+Preprocessing image for OCR: C:\Repositiories\report_text_extractor\Large PDF to JSON Extractor\processing_outputs\page_jpegs\Page_7.jpeg
+Preprocessing image for OCR: C:\Repositiories\report_text_extractor\Large PDF to JSON Extractor\processing_outputs\page_jpegs\Page_8.jpeg
+Preprocessing image for OCR: C:\Repositiories\report_text_extractor\Large PDF to JSON Extractor\processing_outputs\page_jpegs\Page_9.jpeg
+Processing images to markdown...
+Processing batch 1 of 1. Batch size: 10 images.
+--- Elapsed Time: 0:01:02.662300 ---
+{'prompt_tokens': 7053, 'completion_tokens': 2064, 'total_tokens': 9117}
+Markdown for pages 1 to 9 saved to C:\Repositiories\report_text_extractor\Large PDF to JSON Extractor\processing_outputs\page_markdowns\Pages_1_to_9.md    
+Stitched markdown pages saved to: C:\Repositiories\report_text_extractor\Large PDF to JSON Extractor\processing_outputs\convert-me-to-markdown_markdown.md
+Generating JSON output from the markdown file...
+--- Elapsed Time: 0:00:40.169490 ---
+CompletionUsage(completion_tokens=284, prompt_tokens=2367, total_tokens=2651)
+JSON output saved to C:\Repositiories\report_text_extractor\Large PDF to JSON Extractor\convert-me-to-markdown_JSON.json
+PDF convert-me-to-markdown processing complete.
+Total elapsed time: 1 minutes 44 seconds
+Token usage for convert-me-to-markdown:
+  Model: GPT-4-Vision Preview
+    Request request_1:
+      Prompt tokens: 7053
+      Completion tokens: 2064
+      Total tokens: 9117
+  Model: GPT-4-Turbo 1106
+    Request request_1:
+      Prompt tokens: 2367
+      Completion tokens: 284
+      Total tokens: 2651
+Total tokens for convert-me-to-markdown: 11768
+
+Extractor Runner ended at 2024-02-25 21:39:50.483502
+Processing times per PDF:
+    convert-me-to-markdown: 1 minutes 44 seconds
+Total elapsed time: 1 minutes 44 seconds
+
+Total token usage for each model:
+  GPT-4-Vision Preview:
+    Prompt tokens: 7053
+    Completion tokens: 2064
+    Total tokens: 9117
+  GPT-4-Turbo 1106:
+    Prompt tokens: 2367
+    Completion tokens: 284
+    Total tokens: 2651

@@ -1,0 +1,36 @@
+{
+    "title": "How to Successfully Scale Generative AI in Pharma",
+    "authors": ["Eric Berger", "Robbie Sandig", "KC George"],
+    "date": "February 12, 2024",
+    "read_time": "7 min",
+    "brief": "Go beyond the “what” of experimentation to the “how” of setting an organization-wide scaling strategy.",
+    "survey_results": {
+        "expected_savings": {
+            "total": 40,
+            "small": 36,
+            "midsize": 44,
+            "large": 41,
+            "big_pharma": 38
+        },
+        "use_case_development": {
+            "ideation": 60,
+            "proof_of_concept": 55,
+            "pilot_testing": 10,
+            "full_rollout": 5
+        }
+    },
+    "investment_areas": [
+        "IT",
+        "Research",
+        "Biomedical literature review",
+        "Competitive intelligence",
+        "Sales or medical affairs contact center automation"
+    ],
+    "success_stories": [
+        "AI-enabled chatbot for pharma reps",
+        "AI platform for clinical trial protocols",
+        "AI model for clinical trial patient identification",
+        "AI tools for regulatory filing and responses",
+        "AI solutions for salesforce tasks and ad copy"
+    ]
+}

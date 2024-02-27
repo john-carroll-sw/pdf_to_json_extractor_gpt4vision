@@ -16,21 +16,14 @@ from pathlib import Path
 from dotenv import load_dotenv
 
 
-# TODO modularize the code, move the functions to a separate files based on processes; pdf_to_images, preprocess_images, images_to_markdown, generate_json_from_markdown_template
-# TODO **Research how to handle batch size based on an estimate of the number of tokens in the images
-'''
-    Inspired by Matt Groff:
-        https://groff.dev/blog/ingesting-pdfs-with-gpt-vision
-        https://github.com/mattlgroff/pdf-to-markdown
-    
-    1) convert pdfs to images, (code)
-    2) clean/pre-process images, (code)
-    3) convert images to markdown, (GPT-4 Vision to interpret images and generate Markdown text.)
-    4) retrieve JSON output from markdown (GPT-4 Turbo JSON Mode to fill out the JSON schema using the markdown files.)
-        or generate a JSON schema from markdown if a schema is not provided.
-    
-'''
+# TODO modularize the code, move the functions to separate files based on processes; pdf_to_images, preprocess_images, images_to_markdown, generate_json_from_markdown_template
 
+# EDIT THIS Configuration for the runner
+PDF_FOLDER = "PDF Documents" # The folder containing the PDFs to be processed
+USE_SCHEMA = True # Set to True if you have a JSON schema file to use for the JSON output
+JSON_SCHEMA_FILE = "document_schema.json" # The JSON schema file to use if USE_SCHEMA is True
+BATCH_SIZE = 10 # The number of images to process in each batch. Max is 10 for GPT-4 Vision Preview
+PREPROCESS_IMAGES = False # Set to True to enable image preprocessing for OCR optimization
 
 ### Env Configuration
 # Load environment variables from .env file
@@ -53,10 +46,22 @@ client = AzureOpenAI(
     api_version=GPT4T_1106_API_VERSION
 )
 
-BATCH_SIZE = 10 # The number of images to process in each batch. Max is 10 for GPT-4 Vision Preview
-global_token_usage = {} # Global token usage dictionary to keep track of the total usage of tokens
-current_pdf_name = None # The name of the current PDF being processed
+# Logging Variables
+GLOBAL_TOKEN_USAGE = {} # Global token usage dictionary to keep track of the total usage of tokens
+CURRENT_PDF_NAME = None # The name of the current PDF being processed
 
+'''
+    Inspired by Matt Groff:
+        https://groff.dev/blog/ingesting-pdfs-with-gpt-vision
+        https://github.com/mattlgroff/pdf-to-markdown
+    
+    1) convert pdfs to images, (code)
+    2) clean/pre-process images, (code)
+    3) convert images to markdown, (GPT-4 Vision to interpret images and generate Markdown text.)
+    4) retrieve JSON output from markdown (GPT-4 Turbo JSON Mode to fill out the JSON schema using the markdown files.)
+        or generate a JSON schema from markdown if a schema is not provided.
+    
+'''
 
 '''
     1. The process begins with the conversion of PDF documents into images, one for each page, using the pdf2image library. 
@@ -230,7 +235,7 @@ def send_request_with_retry(request_id, headers, payload):
     elapsed_time = datetime.timedelta(seconds=(time.time() - start_time))
     print("--- Elapsed Time: %s ---" % elapsed_time)
     print(json_response["usage"])
-    update_token_usage(current_pdf_name, "GPT-4-Vision Preview", str(request_id), json_response["usage"]["prompt_tokens"], json_response["usage"]["completion_tokens"])
+    update_token_usage(CURRENT_PDF_NAME, "GPT-4-Vision Preview", str(request_id), json_response["usage"]["prompt_tokens"], json_response["usage"]["completion_tokens"])
 
     return json_response["choices"][0]["message"]["content"]
 
@@ -262,6 +267,8 @@ def process_images_to_markdown(image_folder="page_jpegs", markdown_folder="page_
     ### Process images in batches
     # Adjust the batch size as needed
     batch_size = BATCH_SIZE
+    # TODO **Look into how to adjust batch size based on a *token estimation* for the images in the batch in the markdown process. 
+    # NOTE     Need to not exceed 4096 completion tokens on the returning response from the model, as this means information is being cut off.
     request_count = 0
     for i in range(0, len(images), batch_size):
 
@@ -351,7 +358,7 @@ def clean_markdown_content(text):
     elapsed_time = datetime.timedelta(seconds=(time.time() - start_time))
     print("--- Elapsed Time: %s ---" % elapsed_time)
     print(response.usage)
-    update_token_usage(current_pdf_name, "GPT-4-Turbo 1106", "1", response.usage.prompt_tokens, response.usage.completion_tokens)
+    update_token_usage(CURRENT_PDF_NAME, "GPT-4-Turbo 1106", "1", response.usage.prompt_tokens, response.usage.completion_tokens)
     
     return cleaned_content
 
@@ -411,8 +418,9 @@ def generate_json_from_markdown_template(final_markdown_file, json_output_file, 
         {
             "role": "system",
             "content": f"""
+                You are a field extraction model. When given a series of documents, extract all the fields into a json structure.
                 You are tasked with filling out JSON fields using the following markdown text. 
-                You should return JSON output. 
+                You should return JSON object as your output. 
                 Do not explain your output or reasoning.
             """
         },
@@ -427,13 +435,17 @@ def generate_json_from_markdown_template(final_markdown_file, json_output_file, 
             schema = json.load(file)
             messages[0]["content"] += f" Fill out the fields using the provided JSON schema: {schema}"
     else:
-        messages[0]["content"] += f"Generate a JSON schema from the markdown file including what you perceive as the most important, key fields."
-
+        messages[0]["content"] += f"""
+            Given a multi-page markdown file, generate a JSON schema that represents the structure and content of the markdown file. 
+            The resulting JSON Object should include all important fields such as headers, subheaders, lists, links, and text blocks. 
+            Please exclude any page numbers or page separations from the JSON object. 
+            The importance of markdown elements should be determined based on their semantic significance in the document structure. 
+            For instance, headers and subheaders might be considered more important than regular text, and lists might be considered more important than individual list items. 
+        """
     
     response = client.chat.completions.create(
         model=GPT4T_1106_CHAT_MODEL,
         temperature=0,
-        # max_tokens=4096,
         response_format={ "type": "json_object" },
         messages=messages,
     )
@@ -447,7 +459,7 @@ def generate_json_from_markdown_template(final_markdown_file, json_output_file, 
     elapsed_time = datetime.timedelta(seconds=(time.time() - start_time))
     print("--- Elapsed Time: %s ---" % elapsed_time)
     print(response.usage)
-    update_token_usage(current_pdf_name, "GPT-4-Turbo 1106", "1", response.usage.prompt_tokens, response.usage.completion_tokens)
+    update_token_usage(CURRENT_PDF_NAME, "GPT-4-Turbo 1106", "1", response.usage.prompt_tokens, response.usage.completion_tokens)
 
     output_directory = os.path.dirname(json_output_file)
     if not os.path.exists(output_directory):
@@ -459,34 +471,34 @@ def generate_json_from_markdown_template(final_markdown_file, json_output_file, 
 
 def update_token_usage(pdf_path, model_name, request_number, prompt_tokens_used, completion_tokens_used):
     try:
-        if pdf_path not in global_token_usage:
-            global_token_usage[pdf_path] = {}
-        if model_name not in global_token_usage[pdf_path]:
-            global_token_usage[pdf_path][model_name] = {}
-        if f"request_{request_number}" not in global_token_usage[pdf_path][model_name]:
-            global_token_usage[pdf_path][model_name][f"request_{request_number}"] = {
+        if pdf_path not in GLOBAL_TOKEN_USAGE:
+            GLOBAL_TOKEN_USAGE[pdf_path] = {}
+        if model_name not in GLOBAL_TOKEN_USAGE[pdf_path]:
+            GLOBAL_TOKEN_USAGE[pdf_path][model_name] = {}
+        if f"request_{request_number}" not in GLOBAL_TOKEN_USAGE[pdf_path][model_name]:
+            GLOBAL_TOKEN_USAGE[pdf_path][model_name][f"request_{request_number}"] = {
                 "prompt_tokens": 0,
                 "completion_tokens": 0,
                 "total_tokens": 0
             }
 
-        global_token_usage[pdf_path][model_name][f"request_{request_number}"]["prompt_tokens"] += prompt_tokens_used
-        global_token_usage[pdf_path][model_name][f"request_{request_number}"]["completion_tokens"] += completion_tokens_used
-        global_token_usage[pdf_path][model_name][f"request_{request_number}"]["total_tokens"] += prompt_tokens_used + completion_tokens_used
+        GLOBAL_TOKEN_USAGE[pdf_path][model_name][f"request_{request_number}"]["prompt_tokens"] += prompt_tokens_used
+        GLOBAL_TOKEN_USAGE[pdf_path][model_name][f"request_{request_number}"]["completion_tokens"] += completion_tokens_used
+        GLOBAL_TOKEN_USAGE[pdf_path][model_name][f"request_{request_number}"]["total_tokens"] += prompt_tokens_used + completion_tokens_used
 
         # Update the model totals
-        if "summary" not in global_token_usage:
-            global_token_usage["summary"] = {}
-        if model_name not in global_token_usage["summary"]:
-            global_token_usage["summary"][model_name] = {
+        if "summary" not in GLOBAL_TOKEN_USAGE:
+            GLOBAL_TOKEN_USAGE["summary"] = {}
+        if model_name not in GLOBAL_TOKEN_USAGE["summary"]:
+            GLOBAL_TOKEN_USAGE["summary"][model_name] = {
                 "prompt_tokens": 0,
                 "completion_tokens": 0,
                 "total_tokens": 0
             }
 
-        global_token_usage["summary"][model_name]["prompt_tokens"] += prompt_tokens_used
-        global_token_usage["summary"][model_name]["completion_tokens"] += completion_tokens_used
-        global_token_usage["summary"][model_name]["total_tokens"] += prompt_tokens_used + completion_tokens_used
+        GLOBAL_TOKEN_USAGE["summary"][model_name]["prompt_tokens"] += prompt_tokens_used
+        GLOBAL_TOKEN_USAGE["summary"][model_name]["completion_tokens"] += completion_tokens_used
+        GLOBAL_TOKEN_USAGE["summary"][model_name]["total_tokens"] += prompt_tokens_used + completion_tokens_used
 
     except Exception as e:
         print(f"An error occurred while updating token usage: {e}")
@@ -494,7 +506,7 @@ def update_token_usage(pdf_path, model_name, request_number, prompt_tokens_used,
 
 def print_token_usage_for_pdf(pdf_path):
     # Print token usage for the PDF
-    usage = global_token_usage[pdf_path]
+    usage = GLOBAL_TOKEN_USAGE[pdf_path]
     print(f"Token usage for {pdf_path}:")
     total_tokens = 0  # Initialize total tokens counter
     for model_name, requests in usage.items():
@@ -511,7 +523,7 @@ def print_token_usage_for_pdf(pdf_path):
 def print_global_token_usage():
     # Print total token usage for each model
     print("\nTotal token usage for each model:")
-    for model_name, usage in global_token_usage["summary"].items():
+    for model_name, usage in GLOBAL_TOKEN_USAGE["summary"].items():
         print(f"  {model_name}:\n"
         f"    Prompt tokens: {usage['prompt_tokens']}\n"
         f"    Completion tokens: {usage['completion_tokens']}\n"
@@ -529,17 +541,17 @@ def print_elapsed_time(start_time):
 
 
 def runner():
-    global current_pdf_name, global_token_usage
+    global CURRENT_PDF_NAME, GLOBAL_TOKEN_USAGE
     print(f"Extractor Runner started at {datetime.datetime.now()}")
     global_start_time = time.time()
     pdf_processing_times = {} # Create an empty dictionary to store the processing times for each PDF
     current_directory = os.path.dirname(os.path.abspath(__file__)) # Configuration of paths
 
-    # Lease Schema JSON
-    lease_schema_json_path = os.path.join(current_directory, 'document_schema.json')
+    # JSON Schema 
+    schema_json_path = os.path.join(current_directory, JSON_SCHEMA_FILE) # Path to the JSON schema file if provided
 
     # PDF documents folder
-    pdf_folder_name = "PDF Documents" # Folder containing the PDFs to be processed
+    pdf_folder_name = PDF_FOLDER # Folder containing the PDFs to be processed
 
     # Run the extractor for every pdf in the folder
     pdf_folder_path = os.path.join(current_directory, pdf_folder_name)
@@ -549,7 +561,7 @@ def runner():
 
         ### Configuration ###
         pdf_name = os.path.splitext(os.path.basename(pdf_path))[0]
-        current_pdf_name = pdf_name
+        CURRENT_PDF_NAME = pdf_name
         print(f"Processing PDF: {pdf_name}")
         
         # Set-up processing output folders and files  
@@ -565,15 +577,18 @@ def runner():
         pdf_to_images(pdf_path=pdf_path, dpi=100, output_folder=image_files_directory)
 
         # 2) clean/pre-process images, (code)
-        preprocess_images(image_folder=image_files_directory, output_folder=image_files_directory)
+        if PREPROCESS_IMAGES:
+            preprocess_images(image_folder=image_files_directory, output_folder=image_files_directory)
 
         # 3) images to markdown, (GPT-4 Vision to interpret and convert them into Markdown text.)
         process_images_to_markdown(image_folder=image_files_directory, markdown_folder=markdown_files_directory, final_markdown_file=final_markdown_path)
 
         # 4) convert markdown to JSON output (GPT-4 Turbo JSON Mode to fill out the JSON schema using the markdown files.)
-        # If a schema is not provided, generate a JSON schema from the markdown
-        # generate_json_from_markdown_template(final_markdown_file=final_markdown_path, json_output_file=json_output_path)
-        generate_json_from_markdown_template(final_markdown_file=final_markdown_path, json_output_file=json_output_path, schema_file=lease_schema_json_path)
+        #    If a schema is not provided, generate a JSON schema from the markdown
+        if USE_SCHEMA:
+            generate_json_from_markdown_template(final_markdown_file=final_markdown_path, json_output_file=json_output_path, schema_file=schema_json_path)
+        else:
+            generate_json_from_markdown_template(final_markdown_file=final_markdown_path, json_output_file=json_output_path)
         
         print(f"PDF {pdf_name} processing complete.")
         print_elapsed_time(pdf_start_time)

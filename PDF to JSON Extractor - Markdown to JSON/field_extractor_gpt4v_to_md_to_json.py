@@ -16,14 +16,42 @@ from pathlib import Path
 from dotenv import load_dotenv
 
 
-# TODO modularize the code, move the functions to separate files based on processes; pdf_to_images, preprocess_images, images_to_markdown, generate_json_from_markdown_template
+"""
+    Optimizations:
+        1) JSON Schema
+            ○ Supplying a JSON schema for the crash report can improve consistency.
+            ○ Use a small, yet concise JSON schema. The larger the schema, the more fields to search for and fill, thus the model will take longer to return a response.
+            ○ Define the expected structure of the extracted information using the schema.
+            ○ GPT-4 Vision can then align its responses with the defined schema, leading to more deterministic results.
+            ○ The schema should cover field names, data types, and any constraints (e.g., required fields).
+        2) Prompt Engineering
+            ○ Use a more specific prompt to get the best results from the model.
+            ○ Suggest providing the model with a schema and prompt specific to the type of document being processed.
+                i.e, if it's a document specific to a certain industry, country, language, jargon, 
+            ○ If it's a crash report document, prompt the model to extract the fields from a crash report, describe the layout, sections and fields, as well as how to best read the document.
+            ○ If it's a lease document, prompt the model explaining that it's a lease document, describe the sections and layout of the document.
+        3) Pre-Processing of Images
+            ○ Adjust the pre-processing of the images to optimize for OCR.
+            ○ Can adjust the pdf to image conversion DPI, too low and there won't be enough detail, too high and it's unnecessarily expensive to process with the LLM model.
+            ○ Can adjust the image pre-processing techniques to improve the quality of the text extracted from the images when it's processed by the model, 
+                especially if the images are from a scanned pdf: i.e Remove Noise, Sharpen, Contrast, etc.
+        4) Image Batch Size
+            ○ Try to get the image batch size for GPT 4 Vision as close to 10 as possible without sacrificing the quality of the output. 
+                Max output tokens is 4096 tokens.
+            ○ Would need to create an image token estimation function to estimate the number of tokens for each image.
+            ○ Then use the token estimation to determine the batch size.
+            ○ If the token estimation is too high, then the batch size will need to be reduced.
+            ○ Also, depending on the system context, prompt and its settings (Temperature, Top P), 
+                the input tokens will drastically affect the output tokens being returned from the model.
+"""
 
 # EDIT THIS Configuration for the runner
 PDF_FOLDER = "PDF Documents" # The folder containing the PDFs to be processed
-USE_SCHEMA = True # Set to True if you have a JSON schema file to use for the JSON output
+USE_SCHEMA = False # Set to True if you have a JSON schema file to use for the JSON output
 JSON_SCHEMA_FILE = "document_schema.json" # The JSON schema file to use if USE_SCHEMA is True
-BATCH_SIZE = 10 # The number of images to process in each batch. Max is 10 for GPT-4 Vision Preview
+IMAGE_CONVERTER_DPI = 200 # DPI
 PREPROCESS_IMAGES = False # Set to True to enable image preprocessing for OCR optimization
+BATCH_SIZE = 10 # The number of images to process in each batch. Max is 10 for GPT-4 Vision Preview
 
 ### Env Configuration
 # Load environment variables from .env file
@@ -132,8 +160,9 @@ def preprocess_images(image_folder, output_folder):
     3. Once we have these images, we leverage OpenAI's GPT-4 Vision to interpret and convert them into Markdown text. 
     GPT-4 Vision's advanced capabilities allow it to understand complex layouts and visuals, ensuring that the converted 
     Markdown retains the richness and structure of the original PDF. It is prompted to retain the original layout to the best of it's ability. 
-    NOTE: This could be a stopping point, but to ensure highest level of accuracy we continue on to have GPT-4  Vision have another pass in the next step
 '''
+
+# Please note that this is a simplification and the actual number of tokens may vary depending on the specific tokenization process used by the model.
 def count_image_tokens(image_path):
     # Open the image file
     with Image.open(image_path) as img:
@@ -178,9 +207,10 @@ def images_to_markdown(request_count, encoded_images):
                             Using formatting to match the structure of the page as close as you can get. 
                             Only output the markdown and nothing else. Do not explain the output, just return it. 
                             Do not use a single # for a heading. All headings will start with ## or ###. 
-                            Convert tables to markdown tables. Describe charts as best you can. 
-                            DO NOT return in a codeblock. Just return the raw text in markdown format.
+                            Skip over images and charts.
+                            Return all text you see in markdown format.
                             Mark the page number at the top of the markdown's content for each corresponding image.
+                            Do not explain your output or reasoning.
                         """
                     },
                 ]
@@ -191,14 +221,15 @@ def images_to_markdown(request_count, encoded_images):
                     {
                         "type": "text",
                         "text": """
-                            Give me the combined markdown text output from these pages from my scanned PDF.
+                            In great detail, convert markdown text output from these images.
+                            These images are from pages from a scanned PDF.
                         """
                     }
                 ]
             }
         ],
-        "temperature": 0.1,
-        "top_p": 0.95,
+        "temperature": 0,
+        "top_p": 0,
         "max_tokens": 4096
     }
 
@@ -267,7 +298,7 @@ def process_images_to_markdown(image_folder="page_jpegs", markdown_folder="page_
     ### Process images in batches
     # Adjust the batch size as needed
     batch_size = BATCH_SIZE
-    # TODO **Look into how to adjust batch size based on a *token estimation* for the images in the batch in the markdown process. 
+    # TODO **Adjust batch size based on a *token estimation* for the images in the batch in the markdown process. 
     # NOTE     Need to not exceed 4096 completion tokens on the returning response from the model, as this means information is being cut off.
     request_count = 0
     for i in range(0, len(images), batch_size):
@@ -418,7 +449,7 @@ def generate_json_from_markdown_template(final_markdown_file, json_output_file, 
         {
             "role": "system",
             "content": f"""
-                You are a field extraction model. When given a series of documents, extract all the fields into a json structure.
+                You are a field extraction model. When given a series of documents, extract all the fields into a json structure.                
                 You are tasked with filling out JSON fields using the following markdown text. 
                 You should return JSON object as your output. 
                 Do not explain your output or reasoning.
@@ -438,10 +469,10 @@ def generate_json_from_markdown_template(final_markdown_file, json_output_file, 
         messages[0]["content"] += f"""
             Given a multi-page markdown file, generate a JSON schema that represents the structure and content of the markdown file. 
             The resulting JSON Object should include all important fields such as headers, subheaders, lists, links, and text blocks. 
-            Please exclude any page numbers or page separations from the JSON object. 
-            The importance of markdown elements should be determined based on their semantic significance in the document structure. 
-            For instance, headers and subheaders might be considered more important than regular text, and lists might be considered more important than individual list items. 
+            The importance of markdown elements should be determined based on their semantic significance in the document structure; For instance, headers and subheaders might be considered more important than regular text, and lists might be considered more important than individual list items. 
+            Structure the JSON Object to be respective of each page, and sections.
         """
+        # Please exclude any page numbers or page separations from the JSON object. 
     
     response = client.chat.completions.create(
         model=GPT4T_1106_CHAT_MODEL,
@@ -574,7 +605,7 @@ def runner():
 
         ### Process the PDF ###
         # 1) convert pdfs to images, (code)
-        pdf_to_images(pdf_path=pdf_path, dpi=100, output_folder=image_files_directory)
+        pdf_to_images(pdf_path=pdf_path, dpi=IMAGE_CONVERTER_DPI, output_folder=image_files_directory)
 
         # 2) clean/pre-process images, (code)
         if PREPROCESS_IMAGES:

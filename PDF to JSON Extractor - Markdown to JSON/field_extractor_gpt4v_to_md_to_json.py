@@ -47,10 +47,14 @@ from dotenv import load_dotenv
 
 # EDIT THIS Configuration for the runner
 PDF_FOLDER = "PDF Documents" # The folder containing the PDFs to be processed
-USE_SCHEMA = False # Set to True if you have a JSON schema file to use for the JSON output
+USE_SCHEMA = True # Set to True if you have a JSON schema file to use for the JSON output
 JSON_SCHEMA_FILE = "document_schema.json" # The JSON schema file to use if USE_SCHEMA is True
+DOC_DESCRIPTION_PROMPT = """
+    This document is a lease agreement between a landlord and a tenant.
+    There will be multiple addresses in the document, but we are only interested in the address of the property being leased.
+""" # Description of document to add context to the prompt to be used with the GPT-4 Vision API
 IMAGE_CONVERTER_DPI = 200 # DPI
-PREPROCESS_IMAGES = False # Set to True to enable image preprocessing for OCR optimization
+PREPROCESS_IMAGES = True # Set to True to enable image preprocessing for OCR optimization
 BATCH_SIZE = 10 # The number of images to process in each batch. Max is 10 for GPT-4 Vision Preview
 
 ### Env Configuration
@@ -77,6 +81,11 @@ client = AzureOpenAI(
 # Logging Variables
 GLOBAL_TOKEN_USAGE = {} # Global token usage dictionary to keep track of the total usage of tokens
 CURRENT_PDF_NAME = None # The name of the current PDF being processed
+
+class PdfData:
+    def __init__(self, processing_time, num_pages):
+        self.processing_time = processing_time
+        self.num_pages = num_pages
 
 '''
     Inspired by Matt Groff:
@@ -240,10 +249,10 @@ def images_to_markdown(request_count, encoded_images):
             "image_url": {"url": f"data:image/jpeg;base64,{encoded_image}"},
         })
 
-    return send_request_with_retry(request_count, headers, payload)
+    return send_GPT4V_request_with_retry(request_count, headers, payload)
 
 
-def send_request_with_retry(request_id, headers, payload):
+def send_GPT4V_request_with_retry(request_id, headers, payload):
     max_retries = 3
     base_delay = 60  # seconds
     backoff_factor = 2 
@@ -271,7 +280,7 @@ def send_request_with_retry(request_id, headers, payload):
     return json_response["choices"][0]["message"]["content"]
 
 
-def process_images_to_markdown(image_folder="page_jpegs", markdown_folder="page_markdowns", final_markdown_file="converted-pdf.md"):
+def process_images_to_markdown(image_folder="page_jpegs", markdown_folder="page_markdowns", final_markdown_file="final_markdown.md"):
     print("Processing images to markdown...")
     if os.path.exists(markdown_folder):
         shutil.rmtree(markdown_folder)
@@ -298,7 +307,7 @@ def process_images_to_markdown(image_folder="page_jpegs", markdown_folder="page_
     ### Process images in batches
     # Adjust the batch size as needed
     batch_size = BATCH_SIZE
-    # TODO **Adjust batch size based on a *token estimation* for the images in the batch in the markdown process. 
+    # TODO **[Potentially] Look into how to adjust batch size based on a *token estimation* for the images in the batch in the process. 
     # NOTE     Need to not exceed 4096 completion tokens on the returning response from the model, as this means information is being cut off.
     request_count = 0
     for i in range(0, len(images), batch_size):
@@ -449,10 +458,19 @@ def generate_json_from_markdown_template(final_markdown_file, json_output_file, 
         {
             "role": "system",
             "content": f"""
-                You are a field extraction model. When given a series of documents, extract all the fields into a json structure.                
-                You are tasked with filling out JSON fields using the following markdown text. 
-                You should return JSON object as your output. 
-                Do not explain your output or reasoning.
+                You are an expert in field extraction and image analysis. 
+                Your task is to analyze the following markdown text and retrieve values for keys in a JSON object, using a provided JSON schema. 
+                If an image contains a graphic, diagram, or chart, you should cease analysis of that image. 
+                Please note that explanations of your output or reasoning are not required.
+                Do not infer any data based on previous training, strictly use only source text given below as input.
+
+                Your JSON output should:
+                 - be a JSON object that aligns with the provided schema. 
+                 - remove all values for the keys not found in the image.
+                 - always include all keys, even if the value is not found.
+
+                These images are originally from a document. Here are instructions related to the document:
+                {DOC_DESCRIPTION_PROMPT}
             """
         },
         {
@@ -627,15 +645,18 @@ def runner():
 
         # Calculate the processing time for the current PDF, add it to the dictionary
         pdf_processing_time = time.time() - pdf_start_time
-        pdf_processing_times[pdf_name] = pdf_processing_time
+        pdf_processing_times[pdf_name] = PdfData(
+            pdf_processing_time,
+            len([file for file in os.listdir(image_files_directory) if file.endswith(".jpeg")])
+        )
     
     # End of the process
     print(f"Extractor Runner ended at {datetime.datetime.now()}")
     print("Processing times per PDF:")
-    for pdf_name, processing_time in pdf_processing_times.items():
-        minutes = int(processing_time // 60)
-        seconds = int(processing_time % 60)
-        print(f"    {pdf_name}: {minutes} minutes {seconds} seconds")
+    for pdf_name, pdf_data in pdf_processing_times.items():
+        minutes = int(pdf_data.processing_time // 60)
+        seconds = int(pdf_data.processing_time % 60)
+        print(f"    {pdf_name}  ({pdf_data.num_pages} pages): {minutes} minutes {seconds} seconds")
 
     print_elapsed_time(global_start_time)  # Print the global time elapsed
     print_global_token_usage()  # Print the total token usage for each model

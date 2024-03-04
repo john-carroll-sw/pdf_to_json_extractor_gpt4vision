@@ -1,14 +1,21 @@
 # GPT-4 Vision Field Extractor - Converts PDFs to JSON using schema
 
-This repository contains implementations of a field extractor for taking PDF documents to output JSON using OpenAI's GPT-4 Vision Preview.
+Large Language Models (LLMs) have the potential to transform the way we access and use data from legacy documents (like PDFs or Word files). They serve as a bridge connecting the past with the present, empowering organizations to fully leverage their historical records.
 
-## Implementation 1: Small Files
+This repository contains implementations of a field extractor for taking PDF documents to output JSON using OpenAI's GPT-4 Vision Preview, offering flexibility to either generate a new JSON object or populate an existing schema. This functionality can be particularly useful for organizations looking to digitize their data, streamline their workflows, and unlock the full potential of their document archives.
 
-The first implementation is designed to handle smaller PDFs, typically between 1 to 5 pages. This implementation directly uses GPT-4 Vision to extract form fields from the PDF and returns a JSON Object structure representing these fields.
 
-## Implementation 2: Large Files
+## Implementation 1: Simple PDF to JSON
 
-The second implementation is designed to handle larger PDFs, such as those with 50 pages or more. This implementation first converts the PDFs into images. It then uses GPT-4 Vision to convert these images into Markdown. Finally, it converts the collective markdown into a JSON Object structure using GPT-4 Turbo's JSON Mode OR it can make a JSON Object schema from the markdown.
+The first implementation is designed to handle scanned or digital PDFs of various documents, typically between 1 to 5 pages. It's a simpler implementation to show how to use GPT-4 Vision to extract form fields from a PDF and return a JSON Object structure representing these fields.
+
+## Implementation 2: PDF > Images (batches) > JSON
+
+This implementation can handle larger scanned or digital PDFs by sending up to 10 images per request to GPT-4 Vision. There is even retry logic for 429 errors. The process involves converting PDFs to images, cleaning and pre-processing these images, and then extracting JSON values from the images by checking for Key-Value pairs from the JSON Schema. This continues until all images have been processed. Finally it uses an ensemble method and combines all JSON from the batches for its final result. *Optimize for your use.
+
+## Implementation 3: PDF > Images > Markdown > JSON
+
+This implementation performs better for digital PDFs, instead of scanned. It also may provide a higher level of accuracy depending on your use case. It first converts the PDFs into images. It then uses GPT-4 Vision to convert these images into Markdown which is great for keeping the emphasis of the elements on the page. Also, GPT-4 Vision can interpret charts, images, on pages, which is something most OCR libraries cannot do. Finally, it converts the collective markdown into a JSON Object structure using GPT-4 Turbo's JSON Mode OR it can make a JSON Object schema from the markdown.
 
 ## Usage
 
@@ -27,13 +34,13 @@ GPT-4 Vision is a large multimodal model that can analyze images and provide tex
 
 ## GPT-4 Turbo
 
-On the other hand, GPT-4 Turbo has a feature called JSON mode, which ensures valid JSON output[^6][^8][^9]. This feature addresses previous challenges of generating JSON, such as improperly escaped characters, and facilitates data structuring[^6]. With the new JSON mode, developers can instruct GPT-4 Turbo to return structured data, vital for consistency and reliability in applications involving web development, data analytics, and machine learning[^6].
+On the other hand, GPT-4 Turbo(and also 3.5 Turbo) has a feature called JSON mode, which ensures valid JSON output[^6][^8][^9]. This feature addresses previous challenges of generating JSON, such as improperly escaped characters, and facilitates data structuring[^6]. With the new JSON mode, developers can instruct GPT-4 Turbo to return structured data, vital for consistency and reliability in applications involving web development, data analytics, and machine learning[^6].
 
 ## Conclusion
 
 So, if your primary requirement is to get structured JSON output, GPT-4 Turbo with its JSON mode would be a better choice. However, if you need to analyze images and get detailed descriptions, GPT-4 Vision would be more suitable. Please note that the exact details might vary based on the specific version of the API and the specific engine you're using. Always refer to the official [OpenAI API documentation](https://api.openai.com/v1/chat/completions) for the most accurate information.
 
-If your main objective is to do both, then allow GPT-4 Vision to convert the images to markdown, and then allow GPT-4 Turbo to convert this markdown to JSON.
+If your main objective is to do both, then something you might do is allow GPT-4 Vision to convert the images to markdown, and then allow GPT-4 Turbo to convert this markdown to JSON.
 
 > Source: Conversation with Bing, 2/23/2024
 

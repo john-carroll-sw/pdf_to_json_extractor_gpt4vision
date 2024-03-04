@@ -17,12 +17,14 @@ def convert_pdf_to_images(pdf_path, image_path):
         fname = "page_" + str(i+1) + ".jpg"
         image.save(os.path.join(image_path, fname), "JPEG")
 
+
 def encode_images(image_paths):
     encoded_images = []
     for image_path in image_paths:
         encoded_image = base64.b64encode(open(image_path, "rb").read()).decode("ascii")
         encoded_images.append(encoded_image)
     return encoded_images
+
 
 def send_request(encoded_images):
     headers = {
@@ -47,7 +49,7 @@ def send_request(encoded_images):
                     {
                         "type": "text",
                         "text": """
-                            You are a field extraction model. When given a series of documents, extract all the fields into a JSON object structure.
+                            You are a field extraction expert. When given a series of images, extract all the fields into a JSON object structure.
                             Treat the series of documents as one cohesive document and return a json mapping all the appropriate fields.
                             Structure the JSON Object to be respective of each page, and sections.
                             In the JSON Object, supply information about the page using the Header.
@@ -94,7 +96,8 @@ def send_request(encoded_images):
 
     return json_response
 
-def clean_response(response_content):
+
+def clean_json_response(response_content):
     # Clean up the response's content. Convert the response's json string to a json object
     # Remove the leading and trailing characters
     json_string = response_content.replace('```json\n', '')
@@ -107,7 +110,8 @@ def clean_response(response_content):
         print("The JSON string is not complete.")
     return json_object
 
-def write_response_to_file(pdf_path, json_object):
+
+def write_json_to_file(pdf_path, json_object):
     # Create the 'JSON Output' folder if it doesn't exist
     output_folder = os.path.join(os.path.dirname(os.path.abspath(__file__)), "JSON Output")
     if not os.path.exists(output_folder):
@@ -118,6 +122,7 @@ def write_response_to_file(pdf_path, json_object):
     output_filepath = os.path.join(output_folder, output_filename)
     with open(output_filepath, "w") as file:
         json.dump(json_object, file, indent=4)
+
 
 def runner():
     start_time = time.time()  # Start the timer
@@ -154,10 +159,10 @@ def runner():
         response_content = json_response["choices"][0]["message"]["content"]
 
         # Clean the response
-        json_object = clean_response(response_content)
+        json_object = clean_json_response(response_content)
 
         # Output to Output folder directory
-        write_response_to_file(pdf_path, json_object)
+        write_json_to_file(pdf_path, json_object)
 
         # Print the response
         print(response_content)
@@ -175,5 +180,6 @@ def runner():
     seconds = int(elapsed_time % 60)
     print(f"Elapsed time: {minutes} minutes {seconds} seconds")
     
+
 # Run Extractor
 runner()

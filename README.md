@@ -17,7 +17,13 @@ This implementation can handle larger scanned or digital PDFs by sending up to 1
 
 ## Implementation 3: PDF > Images > Markdown > JSON
 
-This implementation performs better for digital PDFs, instead of scanned. It also may provide a higher level of accuracy depending on your use case. It first converts the PDFs into images. It then uses GPT-4 Vision to convert these images into Markdown which is great for keeping the emphasis of the elements on the page. Also, GPT-4 Vision can interpret charts, images, on pages, which is something most OCR libraries cannot do. Finally, it converts the collective markdown into a JSON Object structure using GPT-4 Turbo's JSON Mode OR it can make a JSON Object schema from the markdown.
+This implementation performs better for digital PDFs, instead of scanned. 
+It also may provide a higher level of accuracy depending on your use case. It first converts the PDFs into images. It then uses GPT-4 Vision to convert these images into Markdown which is great for keeping the emphasis of the elements on the page. Also, GPT-4 Vision can interpret charts, images, on pages, which is something most OCR libraries cannot do. Finally, it converts the collective markdown into a JSON Object structure using GPT-4 Turbo's JSON Mode OR it can make a JSON Object schema from the markdown.
+    
+Inspired by Matt Groff's implementation:
+* https://groff.dev/blog/ingesting-pdfs-with-gpt-vision
+* https://github.com/mattlgroff/pdf-to-markdown
+    
 
 ## Usage
 

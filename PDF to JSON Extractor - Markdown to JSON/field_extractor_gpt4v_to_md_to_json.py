@@ -16,43 +16,11 @@ from pathlib import Path
 from dotenv import load_dotenv
 
 
-"""
-    Optimizations:
-        1) JSON Schema
-            ○ Supplying a JSON schema for the crash report can improve consistency.
-            ○ Use a small, yet concise JSON schema. The larger the schema, the more fields to search for and fill, thus the model will take longer to return a response.
-            ○ Define the expected structure of the extracted information using the schema.
-            ○ GPT-4 Vision can then align its responses with the defined schema, leading to more deterministic results.
-            ○ The schema should cover field names, data types, and any constraints (e.g., required fields).
-        2) Prompt Engineering
-            ○ Use a more specific prompt to get the best results from the model.
-            ○ Suggest providing the model with a schema and prompt specific to the type of document being processed.
-                i.e, if it's a document specific to a certain industry, country, language, jargon, 
-            ○ If it's a crash report document, prompt the model to extract the fields from a crash report, describe the layout, sections and fields, as well as how to best read the document.
-            ○ If it's a lease document, prompt the model explaining that it's a lease document, describe the sections and layout of the document.
-        3) Pre-Processing of Images
-            ○ Adjust the pre-processing of the images to optimize for OCR.
-            ○ Can adjust the pdf to image conversion DPI, too low and there won't be enough detail, too high and it's unnecessarily expensive to process with the LLM model.
-            ○ Can adjust the image pre-processing techniques to improve the quality of the text extracted from the images when it's processed by the model, 
-                especially if the images are from a scanned pdf: i.e Remove Noise, Sharpen, Contrast, etc.
-        4) Image Batch Size
-            ○ Try to get the image batch size for GPT 4 Vision as close to 10 as possible without sacrificing the quality of the output. 
-                Max output tokens is 4096 tokens.
-            ○ Would need to create an image token estimation function to estimate the number of tokens for each image.
-            ○ Then use the token estimation to determine the batch size.
-            ○ If the token estimation is too high, then the batch size will need to be reduced.
-            ○ Also, depending on the system context, prompt and its settings (Temperature, Top P), 
-                the input tokens will drastically affect the output tokens being returned from the model.
-"""
-
 # EDIT THIS Configuration for the runner
 PDF_FOLDER = "PDF Documents" # The folder containing the PDFs to be processed
 USE_SCHEMA = True # Set to True if you have a JSON schema file to use for the JSON output
 JSON_SCHEMA_FILE = "document_schema.json" # The JSON schema file to use if USE_SCHEMA is True
-DOC_DESCRIPTION_PROMPT = """
-    This document is a lease agreement between a landlord and a tenant.
-    There will be multiple addresses in the document, but we are only interested in the address of the property being leased.
-""" # Description of document to add context to the prompt to be used with the GPT-4 Vision API
+DOC_DESCRIPTION_PROMPT = """""" # Description of document to add context to the prompt to be used with the GPT-4 Vision API
 IMAGE_CONVERTER_DPI = 200 # DPI
 PREPROCESS_IMAGES = True # Set to True to enable image preprocessing for OCR optimization
 BATCH_SIZE = 10 # The number of images to process in each batch. Max is 10 for GPT-4 Vision Preview

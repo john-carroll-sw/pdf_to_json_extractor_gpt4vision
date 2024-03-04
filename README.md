@@ -30,7 +30,7 @@ Pick the program you wish to experiment with to best serve your needs.
 Here are some ways to optimize the OCR capabilities of GPT-4 Vision:
 
 ## 1) JSON Schema
-* Supplying a JSON schema for the crash report can improve consistency.
+* Supplying a JSON schema can improve consistency.
 
 * Use a small, yet concise JSON schema. The larger the schema, the more fields to search for and fill, thus the model will take longer to return a response.
 
@@ -46,9 +46,9 @@ Here are some ways to optimize the OCR capabilities of GPT-4 Vision:
 * Suggest providing the model with a schema and prompt specific to the type of document being processed.
     i.e, if it's a document specific to a certain industry, country, language, jargon, 
 
-* If it's a crash report document, prompt the model to extract the fields from a crash report, describe the layout, sections and fields, as well as how to best read the document.
+* If it's a DMV document, prompt the model to extract the fields from a DMV, describe the layout, sections and fields, as well as how to best read the document.
 
-* If it's a lease document, prompt the model explaining that it's a lease document, describe the sections and layout of the document.
+* If it's a medical document, prompt the model explaining that it's a medical document, describe the sections and layout of the document.
 
 ## 3) Pre-Processing of Images
 

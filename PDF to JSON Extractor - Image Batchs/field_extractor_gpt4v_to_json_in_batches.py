@@ -19,10 +19,7 @@ from dotenv import load_dotenv
 # EDIT THIS Configuration for the runner
 PDF_FOLDER = "PDF Documents" # The folder containing the PDFs to be processed
 JSON_SCHEMA_FILE = "document_schema.json" # JSON Schema used in the prompt
-DOC_DESCRIPTION_PROMPT = """
-    This document is a lease agreement between a landlord and a tenant.
-    There will be multiple addresses in the document, but we are only interested in the address of the property being leased.
-""" # Description of document to add context to the prompt to be used with the GPT-4 Vision API
+DOC_DESCRIPTION_PROMPT = """""" # Description of document to add context to the prompt to be used with the GPT-4 Vision API
 IMAGE_CONVERTER_DPI = 200 # DPI
 PREPROCESS_IMAGES = True # Set to True to enable image preprocessing for OCR optimization
 BATCH_SIZE = 10 # The number of images to process in each batch. Max is 10 for GPT-4 Vision Preview
@@ -145,6 +142,7 @@ def clean_json_response(response_content):
         json_object = json.loads(json_string)
         # print(json_object)
     except json.JSONDecodeError:
+        # NOTE: This may happen because GPT-4 Vision is still in preview and the JSON response may not be complete.
         print("The JSON string is not complete.")
     return json_object
 
@@ -312,7 +310,7 @@ def query_for_schema_from_image_batch(request_count, schema_file, encoded_images
         ],
         "temperature": 1, # Set to 0 to disable temperature sampling, default is 1
         "top_p": 1, # Set to 0 to disable nucleus sampling, default is 1
-        "max_tokens": 1000
+        "max_tokens": 4096
     }
 
     # Add an item for each encoded image, limited to 10 images

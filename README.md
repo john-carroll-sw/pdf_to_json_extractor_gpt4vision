@@ -4,6 +4,8 @@ Large Language Models (LLMs) have the potential to transform the way we access a
 
 This repository contains implementations of a field extractor for taking PDF documents to output JSON using OpenAI's GPT-4 Vision Preview, offering flexibility to either generate a new JSON object or populate an existing schema. This functionality can be particularly useful for organizations looking to digitize their data, streamline their workflows, and unlock the full potential of their document archives.
 
+#### *Note 
+There are several Python libraries that can help you convert a PDF to JSON using text extraction, such as (for Python): PyPDF2, PDFMiner, Tabula-py. These libraries extract text from PDFs, so they work best with PDFs that contain selectable text. If your PDF contains **scanned image**s, you might need to use an OCR (Optical Character Recognition) library like pytesseract in combination with these libraries -- or use an LLM such as GPT-4 Vision.
 
 ## Implementation 1: Simple PDF to JSON
 

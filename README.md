@@ -31,6 +31,28 @@ To use these implementations, you will need to have Python installed and the nec
 
 Pick the program you wish to experiment with to best serve your needs.
 
+### Output Sample
+
+    Processing times for each PDF and the total token usage for each model:
+    Sample_Document  (4 pages): 4 minutes 36 seconds
+        Total token usage:
+        Model: GPT-4-Vision Preview
+            Total prompt tokens: 37542
+            Total completion tokens: 8014
+            Total token usage: 45556 tokens
+
+            Prompt token cost: $0.38
+            Completion token cost: $0.24
+            Total cost: $0.62
+
+
+    Total elapsed time: 4 minutes 36 seconds
+    Total token usage for each model:
+        GPT-4-Vision Preview:
+            Prompt tokens: 37542
+            Completion tokens: 8014
+            Total tokens: 45556
+
 # Optimizations:
 
 Here are some ways to optimize the OCR capabilities of GPT-4 Vision:

@@ -14,20 +14,41 @@ from openai import AzureOpenAI
 from pdf2image import convert_from_path
 from pathlib import Path
 from dotenv import load_dotenv
+import sys
+sys.path.append(os.path.dirname(os.path.dirname(__file__)))
+from Helpers import FileProcessingMetrics, Utilities
 
+'''
+    Field Extractor using GPT-4 Vision to extract markdown values from images in batches
+    and GPT-4 Turbo to fill out the JSON fields using the markdown files.
+    
+    Inspired by Matt Groff:
+        https://groff.dev/blog/ingesting-pdfs-with-gpt-vision
+        https://github.com/mattlgroff/pdf-to-markdown
+    
+    The process is broken down into 4 steps:
+    1) convert pdfs to images, (code)
+    2) clean/pre-process images, (code)
+    3) convert images to markdown, (GPT-4 Vision to interpret images and generate Markdown text.)
+    4) retrieve JSON output from markdown (GPT-4 Turbo JSON Mode to fill out the JSON schema using the markdown files.)
+        or generate a JSON schema from markdown if a schema is not provided.
+'''
 
-# EDIT THIS Configuration for the runner
+''' 
+    EDIT THIS Configuration for the runner 
+'''
 PDF_FOLDER = "PDF Documents" # The folder containing the PDFs to be processed
 USE_SCHEMA = True # Set to True if you have a JSON schema file to use for the JSON output
 JSON_SCHEMA_FILE = "document_schema.json" # The JSON schema file to use if USE_SCHEMA is True
-DOC_DESCRIPTION_PROMPT = """""" # Description of document to add context to the prompt to be used with the GPT-4 Vision API
+DOC_DESCRIPTION_PROMPT = """
+    Be as precise as possible when extracting the information from the images.
+""" # Description of document to add context to the prompt to be used with the GPT-4 Vision API
 IMAGE_CONVERTER_DPI = 200 # DPI
 PREPROCESS_IMAGES = True # Set to True to enable image preprocessing for OCR optimization
 BATCH_SIZE = 10 # The number of images to process in each batch. Max is 10 for GPT-4 Vision Preview
 
 ### Env Configuration
-# Load environment variables from .env file
-load_dotenv()
+load_dotenv() # Load environment variables from .env file
 # GPT-4 Vision Preview
 GPT4V_KEY = os.getenv("GPT4V_KEY")  # Your GPT4V key
 GPT4V_ENDPOINT = os.getenv("GPT4V_ENDPOINT")  # The API endpoint for your GPT4V instance
@@ -47,116 +68,39 @@ client = AzureOpenAI(
 )
 
 # Logging Variables
-GLOBAL_TOKEN_USAGE = {} # Global token usage dictionary to keep track of the total usage of tokens
 CURRENT_PDF_NAME = None # The name of the current PDF being processed
-
-class PdfData:
-    def __init__(self, processing_time, num_pages):
-        self.processing_time = processing_time
-        self.num_pages = num_pages
+FILE_PROCESSING_METRICS = FileProcessingMetrics() # File processing metrics for all runs, tracks tokens and processing times
 
 '''
-    Inspired by Matt Groff:
-        https://groff.dev/blog/ingesting-pdfs-with-gpt-vision
-        https://github.com/mattlgroff/pdf-to-markdown
-    
-    1) convert pdfs to images, (code)
-    2) clean/pre-process images, (code)
-    3) convert images to markdown, (GPT-4 Vision to interpret images and generate Markdown text.)
-    4) retrieve JSON output from markdown (GPT-4 Turbo JSON Mode to fill out the JSON schema using the markdown files.)
-        or generate a JSON schema from markdown if a schema is not provided.
-    
+    Functions
 '''
+def send_GPT4V_request_with_retry(request_id, headers, payload):
+    max_retries = 3
+    base_delay = 60  # seconds
+    backoff_factor = 2 
 
-'''
-    1. The process begins with the conversion of PDF documents into images, one for each page, using the pdf2image library. 
-    This step is essential for capturing the entire content of the PDF, including charts and images that might be lost in simple text extractions.
-'''
-def pdf_to_images(pdf_path, dpi=300, output_folder="page_jpegs"):
-    if os.path.exists(output_folder):
-        shutil.rmtree(output_folder)
-    if not os.path.exists(output_folder):
-        os.makedirs(output_folder)
-        
-    print(f"Converting PDF to images with DPI={dpi}...")
-    images = convert_from_path(pdf_path, dpi=dpi, fmt='jpeg')
-    total_pages = len(images)
-    digits = len(str(total_pages))
+    for retry in range(max_retries):
+        try:
+            start_time = time.time()
+            response = requests.post(GPT4V_ENDPOINT, headers=headers, json=payload)
+            response.raise_for_status()  # Will raise an HTTPError if the HTTP request returned an unsuccessful status code
+            json_response = response.json()
+            break  # Break the loop if the request is successful
+        except requests.RequestException as e:
+            if response.status_code == 429:
+                delay = base_delay * (backoff_factor ** retry) # exponential backoff
+                print(f"Received 429 error. Retrying in {delay} seconds...")
+                time.sleep(delay)
+            else:
+                raise SystemExit(f"Failed to make the request. Error: {e}")
 
-    for i, image in enumerate(images):
-        image_path = os.path.join(output_folder, f"Page_{str(i+1).zfill(digits)}.jpeg")
-        image.save(image_path, "JPEG")
-        print(f"Page {i+1} saved as image: {image_path}")
+    elapsed_time = datetime.timedelta(seconds=(time.time() - start_time))
+    print("--- Elapsed Time: %s ---" % elapsed_time)
+    print(json_response["usage"])
+    FILE_PROCESSING_METRICS.update_token_usage(CURRENT_PDF_NAME, "GPT-4-Vision Preview", str(request_id), json_response["usage"]["prompt_tokens"], json_response["usage"]["completion_tokens"])
 
+    return json_response["choices"][0]["message"]["content"]
 
-'''
-    2. Image Preprocessing for OCR Optimization: take from https://www.reveation.io/blog/automated-bank-statement-analysis/
-    Image Preprocessing for OCR Optimization: The project aims to enhance OCR accuracy by implementing image preprocessing techniques. 
-    These techniques include adaptive thresholding improve the quality of textual content within the images.
-'''
-
-def preprocess_image_for_ocr(image_path, output_path):
-    print(f"Preprocessing image for OCR: {image_path}")
-    # Load the image
-    image = cv2.imread(image_path, cv2.IMREAD_COLOR)
-
-    # Convert the image to grayscale
-    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-
-    # Apply Otsu's binarization
-    # _, binary = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
-
-    # Gaussian adaptive thresholding
-    # binary = cv2.adaptiveThreshold(gray, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY, 11, 2)
-
-    # Convert NumPy array back to PIL Image
-    enhanced_image = Image.fromarray(gray)
-
-    # Enhance contrast
-    enhancer = ImageEnhance.Contrast(enhanced_image)
-    contrast_enhanced_image = enhancer.enhance(1.2)  # Experiment with enhancement factor
-
-    # Save the pre-processed image as JPEG
-    contrast_enhanced_image.save(image_path)
-
-
-def preprocess_images(image_folder, output_folder):
-    print(f"Processing images in the directory: {image_folder}")
-    # Get a list of image files in the directory
-    image_files = [file for file in os.listdir(image_folder) if file.endswith(".jpeg")]
-
-    # Process each image in the directory
-    for image_file in image_files:
-        image_path = os.path.join(image_folder, image_file)
-        output_path = os.path.join(output_folder, image_file.split('.')[0] + "_processed.jpeg")
-        # Call the functions to preprocess and encode the image
-        preprocess_image_for_ocr(image_path, output_path)
-
-
-'''
-    3. Once we have these images, we leverage OpenAI's GPT-4 Vision to interpret and convert them into Markdown text. 
-    GPT-4 Vision's advanced capabilities allow it to understand complex layouts and visuals, ensuring that the converted 
-    Markdown retains the richness and structure of the original PDF. It is prompted to retain the original layout to the best of it's ability. 
-'''
-
-# Please note that this is a simplification and the actual number of tokens may vary depending on the specific tokenization process used by the model.
-def count_image_tokens(image_path):
-    # Open the image file
-    with Image.open(image_path) as img:
-        # Get image size
-        width, height = img.size
-
-    # Calculate the number of tokens based on the formula provided by OpenAI
-    h = ceil(height / 512)
-    w = ceil(width / 512)
-    n = w * h
-    total = 85 + 170 * n
-
-    return total
-
-def encode_image_to_base64(image_path):
-    with open(image_path, "rb") as image_file:
-        return base64.b64encode(image_file.read()).decode('utf-8')
 
 def images_to_markdown(request_count, encoded_images):
     headers = {
@@ -220,34 +164,6 @@ def images_to_markdown(request_count, encoded_images):
     return send_GPT4V_request_with_retry(request_count, headers, payload)
 
 
-def send_GPT4V_request_with_retry(request_id, headers, payload):
-    max_retries = 3
-    base_delay = 60  # seconds
-    backoff_factor = 2 
-
-    for retry in range(max_retries):
-        try:
-            start_time = time.time()
-            response = requests.post(GPT4V_ENDPOINT, headers=headers, json=payload)
-            response.raise_for_status()  # Will raise an HTTPError if the HTTP request returned an unsuccessful status code
-            json_response = response.json()
-            break  # Break the loop if the request is successful
-        except requests.RequestException as e:
-            if response.status_code == 429:
-                delay = base_delay * (backoff_factor ** retry) # exponential backoff
-                print(f"Received 429 error. Retrying in {delay} seconds...")
-                time.sleep(delay)
-            else:
-                raise SystemExit(f"Failed to make the request. Error: {e}")
-
-    elapsed_time = datetime.timedelta(seconds=(time.time() - start_time))
-    print("--- Elapsed Time: %s ---" % elapsed_time)
-    print(json_response["usage"])
-    update_token_usage(CURRENT_PDF_NAME, "GPT-4-Vision Preview", str(request_id), json_response["usage"]["prompt_tokens"], json_response["usage"]["completion_tokens"])
-
-    return json_response["choices"][0]["message"]["content"]
-
-
 def process_images_to_markdown(image_folder="page_jpegs", markdown_folder="page_markdowns", final_markdown_file="final_markdown.md"):
     print("Processing images to markdown...")
     if os.path.exists(markdown_folder):
@@ -287,7 +203,7 @@ def process_images_to_markdown(image_folder="page_jpegs", markdown_folder="page_
         total_batches = (len(images) + batch_size - 1) // batch_size
         num_images_in_batch = len(batch_images)
         print(f"Processing batch {batch_number} of {total_batches}. Batch size({batch_size} max): {num_images_in_batch} images.")
-        encoded_images = [encode_image_to_base64(str(image_path)) for image_path in batch_images]
+        encoded_images = [Utilities.encode_image_to_base64(str(image_path)) for image_path in batch_images]
         markdown_content = images_to_markdown(request_count, encoded_images)
 
         # Save the batch markdown content to a file
@@ -313,7 +229,7 @@ def process_images_to_markdown(image_folder="page_jpegs", markdown_folder="page_
 def stitch_markdown_pages(markdown_dir, output_file):
     """Combine markdown files from a directory into a single markdown file."""
     files = os.listdir(markdown_dir)
-    sorted_files = sort_files_naturally(files)
+    sorted_files = Utilities.sort_files_naturally(files)
     
     with open(output_file, 'w', encoding='utf-8') as outfile:
         for filename in sorted_files:
@@ -366,7 +282,7 @@ def clean_markdown_content(text):
     elapsed_time = datetime.timedelta(seconds=(time.time() - start_time))
     print("--- Elapsed Time: %s ---" % elapsed_time)
     print(response.usage)
-    update_token_usage(CURRENT_PDF_NAME, "GPT-4-Turbo 1106", "1", response.usage.prompt_tokens, response.usage.completion_tokens)
+    FILE_PROCESSING_METRICS.update_token_usage(CURRENT_PDF_NAME, "GPT-4-Turbo 1106", "1", response.usage.prompt_tokens, response.usage.completion_tokens)
     
     return cleaned_content
 
@@ -400,12 +316,6 @@ def process_markdown_files(input_directory_path, output_directory_path):
         with open(cleaned_file_path, 'w', encoding='utf-8') as file:
             file.write(cleaned_content)
         print(f"Cleaned content saved to {cleaned_file_path}")
-
-def sort_files_naturally(files):
-    """Sort the files in natural order to handle the numbering correctly."""
-    convert = lambda text: int(text) if text.isdigit() else text.lower()
-    alphanum_key = lambda key: [convert(c) for c in re.split('([0-9]+)', key)]
-    return sorted(files, key=alphanum_key)
 
 
 '''
@@ -476,7 +386,7 @@ def generate_json_from_markdown_template(final_markdown_file, json_output_file, 
     elapsed_time = datetime.timedelta(seconds=(time.time() - start_time))
     print("--- Elapsed Time: %s ---" % elapsed_time)
     print(response.usage)
-    update_token_usage(CURRENT_PDF_NAME, "GPT-4-Turbo 1106", "1", response.usage.prompt_tokens, response.usage.completion_tokens)
+    FILE_PROCESSING_METRICS.update_token_usage(CURRENT_PDF_NAME, "GPT-4-Turbo 1106", "1", response.usage.prompt_tokens, response.usage.completion_tokens)
 
     output_directory = os.path.dirname(json_output_file)
     if not os.path.exists(output_directory):
@@ -486,88 +396,12 @@ def generate_json_from_markdown_template(final_markdown_file, json_output_file, 
         print(f"JSON output saved to {json_output_file}")
 
 
-def update_token_usage(pdf_path, model_name, request_number, prompt_tokens_used, completion_tokens_used):
-    try:
-        if pdf_path not in GLOBAL_TOKEN_USAGE:
-            GLOBAL_TOKEN_USAGE[pdf_path] = {}
-        if model_name not in GLOBAL_TOKEN_USAGE[pdf_path]:
-            GLOBAL_TOKEN_USAGE[pdf_path][model_name] = {}
-        if f"request_{request_number}" not in GLOBAL_TOKEN_USAGE[pdf_path][model_name]:
-            GLOBAL_TOKEN_USAGE[pdf_path][model_name][f"request_{request_number}"] = {
-                "prompt_tokens": 0,
-                "completion_tokens": 0,
-                "total_tokens": 0
-            }
-
-        GLOBAL_TOKEN_USAGE[pdf_path][model_name][f"request_{request_number}"]["prompt_tokens"] += prompt_tokens_used
-        GLOBAL_TOKEN_USAGE[pdf_path][model_name][f"request_{request_number}"]["completion_tokens"] += completion_tokens_used
-        GLOBAL_TOKEN_USAGE[pdf_path][model_name][f"request_{request_number}"]["total_tokens"] += prompt_tokens_used + completion_tokens_used
-
-        # Update the model totals
-        if "summary" not in GLOBAL_TOKEN_USAGE:
-            GLOBAL_TOKEN_USAGE["summary"] = {}
-        if model_name not in GLOBAL_TOKEN_USAGE["summary"]:
-            GLOBAL_TOKEN_USAGE["summary"][model_name] = {
-                "prompt_tokens": 0,
-                "completion_tokens": 0,
-                "total_tokens": 0
-            }
-
-        GLOBAL_TOKEN_USAGE["summary"][model_name]["prompt_tokens"] += prompt_tokens_used
-        GLOBAL_TOKEN_USAGE["summary"][model_name]["completion_tokens"] += completion_tokens_used
-        GLOBAL_TOKEN_USAGE["summary"][model_name]["total_tokens"] += prompt_tokens_used + completion_tokens_used
-
-    except Exception as e:
-        print(f"An error occurred while updating token usage: {e}")
-
-
-def print_token_usage_for_pdf(pdf_path):
-    # Print token usage for the PDF
-    usage = GLOBAL_TOKEN_USAGE[pdf_path]
-    print(f"Token usage for {pdf_path}:")
-    total_tokens = 0  # Initialize total tokens counter
-    for model_name, requests in usage.items():
-        print(f"  Model: {model_name}")
-        for request_number, tokens in requests.items():
-            print(f"    Request {request_number}:")
-            print(f"      Prompt tokens: {tokens['prompt_tokens']}")
-            print(f"      Completion tokens: {tokens['completion_tokens']}")
-            print(f"      Total tokens: {tokens['total_tokens']}")
-            total_tokens += tokens['total_tokens']  # Add total tokens for each model
-    print(f"Total tokens for {pdf_path}: {total_tokens}\n")
-
-
-def print_global_token_usage():
-    # Print total token usage for each model
-    print("\nTotal token usage for each model:")
-    for model_name, usage in GLOBAL_TOKEN_USAGE["summary"].items():
-        print(f"  {model_name}:\n"
-        f"    Prompt tokens: {usage['prompt_tokens']}\n"
-        f"    Completion tokens: {usage['completion_tokens']}\n"
-        f"    Total tokens: {usage['total_tokens']}")
-
-
-def print_elapsed_time(start_time):
-    end_time = time.time()  # Stop the timer
-    elapsed_time = end_time - start_time  # Calculate the elapsed time
-
-    # Convert elapsed time to minutes and seconds
-    minutes = int(elapsed_time // 60)
-    seconds = int(elapsed_time % 60)
-    print(f"Total elapsed time: {minutes} minutes {seconds} seconds")
-
-
 def runner():
-    global CURRENT_PDF_NAME, GLOBAL_TOKEN_USAGE
+    global CURRENT_PDF_NAME, FILE_PROCESSING_METRICS
     print(f"Extractor Runner started at {datetime.datetime.now()}")
     global_start_time = time.time()
-    pdf_processing_times = {} # Create an empty dictionary to store the processing times for each PDF
     current_directory = os.path.dirname(os.path.abspath(__file__)) # Configuration of paths
-
-    # JSON Schema 
     schema_json_path = os.path.join(current_directory, JSON_SCHEMA_FILE) # Path to the JSON schema file if provided
-
-    # PDF documents folder
     pdf_folder_name = PDF_FOLDER # Folder containing the PDFs to be processed
 
     # Run the extractor for every pdf in the folder
@@ -591,11 +425,11 @@ def runner():
 
         ### Process the PDF ###
         # 1) convert pdfs to images, (code)
-        pdf_to_images(pdf_path=pdf_path, dpi=IMAGE_CONVERTER_DPI, output_folder=image_files_directory)
+        Utilities.pdf_to_images(pdf_path=pdf_path, dpi=IMAGE_CONVERTER_DPI, output_folder=image_files_directory)
 
         # 2) clean/pre-process images, (code)
         if PREPROCESS_IMAGES:
-            preprocess_images(image_folder=image_files_directory, output_folder=image_files_directory)
+            Utilities.preprocess_images(image_folder=image_files_directory, output_folder=image_files_directory)
 
         # 3) images to markdown, (GPT-4 Vision to interpret and convert them into Markdown text.)
         process_images_to_markdown(image_folder=image_files_directory, markdown_folder=markdown_files_directory, final_markdown_file=final_markdown_path)
@@ -607,27 +441,28 @@ def runner():
         else:
             generate_json_from_markdown_template(final_markdown_file=final_markdown_path, json_output_file=json_output_path)
         
+        # Print the processing times for the PDF and the total token usage for each model
         print(f"PDF {pdf_name} processing complete.")
-        print_elapsed_time(pdf_start_time)
-        print_token_usage_for_pdf(pdf_name)
+        Utilities.print_elapsed_time(pdf_start_time)
+        FILE_PROCESSING_METRICS.print_all_token_usage_for_each_file(pdf_name)
 
-        # Calculate the processing time for the current PDF, add it to the dictionary
+        # Update the processing times for the PDF and the number of pages
         pdf_processing_time = time.time() - pdf_start_time
-        pdf_processing_times[pdf_name] = PdfData(
-            pdf_processing_time,
-            len([file for file in os.listdir(image_files_directory) if file.endswith(".jpeg")])
-        )
+        FILE_PROCESSING_METRICS.update_file_data(pdf_name, pdf_processing_time, 
+            len([file for file in os.listdir(image_files_directory) if file.endswith(".jpeg")]))
     
     # End of the process
+    print("========================================================")
     print(f"Extractor Runner ended at {datetime.datetime.now()}")
-    print("Processing times per PDF:")
-    for pdf_name, pdf_data in pdf_processing_times.items():
-        minutes = int(pdf_data.processing_time // 60)
-        seconds = int(pdf_data.processing_time % 60)
-        print(f"    {pdf_name}  ({pdf_data.num_pages} pages): {minutes} minutes {seconds} seconds")
+    print("\nProcessing times for each PDF and the total token usage for each model:")
+    for file_path, file_data in FILE_PROCESSING_METRICS.usage.items():
+        if file_path != 'summary':
+            print(f"  {file_data['file_data'].get_formatted_processing_time(file_path)}")
+            FILE_PROCESSING_METRICS.print_total_token_usage_for_each_file(file_path)
 
-    print_elapsed_time(global_start_time)  # Print the global time elapsed
-    print_global_token_usage()  # Print the total token usage for each model
+    # Print the global time elapsed and the global total token usage for each model
+    Utilities.print_elapsed_time(global_start_time)  # Print the global time elapsed
+    FILE_PROCESSING_METRICS.print_global_token_usage()  # Print the global total token usage for each model
 
 
 # Run Extractor

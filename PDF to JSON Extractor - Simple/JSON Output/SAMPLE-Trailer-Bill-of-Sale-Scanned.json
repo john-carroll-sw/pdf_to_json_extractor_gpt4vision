@@ -1,0 +1,57 @@
+{
+    "Page 1": {
+        "Header": "TRAILER BILL OF SALE",
+        "Date of Sale": "02/12/2022",
+        "Purchase Details": {
+            "Amount": "$2750.00",
+            "Buyer Name": "Missy Sutton",
+            "Buyer Address": "21 Roosevelt Road, Bettendorf, Iowa 52722",
+            "Seller Name": "Klay West",
+            "Seller Address": "346 Pyramid Road, Iowa City, Iowa 52240"
+        },
+        "Trailer Details": {
+            "Make": "Hand H Trailer",
+            "Model": "7x14 Pull",
+            "Year": "2018",
+            "Axles": "1 (single)",
+            "Type": "Utility",
+            "VIN": "5J2JW45202JLJ223",
+            "Condition": "used"
+        },
+        "Certification": "Seller certifies that to be the legal and true owner of the Trailer and is to be sold in 'as-is' condition.",
+        "Agreement Date": "February 2nd, 2022",
+        "Signatures": {
+            "Seller": {
+                "Printed Name": "Klay West",
+                "Signature": "Klay West",
+                "Date": "02/12/2022"
+            },
+            "Buyer": {
+                "Printed Name": "Missy Sutton",
+                "Signature": "Missy Sutton",
+                "Date": "02/12/2022"
+            },
+            "Witness 1": {
+                "Printed Name": "Paloma Rivers",
+                "Signature": "Paloma Rivers",
+                "Date": "02/12/2022"
+            },
+            "Witness 2": {
+                "Printed Name": "Albert Kelley",
+                "Signature": "Albert Kelley",
+                "Date": "02/12/2022"
+            }
+        }
+    },
+    "Page 2": {
+        "Header": "ACKNOWLEDGMENT OF NOTARY PUBLIC",
+        "State": "",
+        "County": "",
+        "Day": "",
+        "Notary Public": {
+            "Name": "",
+            "Signature": "",
+            "Commission Expires": ""
+        }
+    }
+}

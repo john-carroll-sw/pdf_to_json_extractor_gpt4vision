@@ -128,7 +128,7 @@ def runner():
     start_time = time.time()  # Start the timer
 
     # PDF documents folder
-    pdf_folder_name = "Reports"
+    pdf_folder_name = "PDF Documents"
     current_directory = os.path.dirname(os.path.abspath(__file__))
     pdf_folder_path = os.path.join(current_directory, pdf_folder_name)
     pdf_paths = [os.path.join(pdf_folder_path, file) for file in os.listdir(pdf_folder_path)]
@@ -141,7 +141,8 @@ def runner():
         image_path = os.path.join(current_directory, image_folder_name)
 
         # Clear the images folder
-        shutil.rmtree(image_path)
+        if os.path.exists(image_path):
+            shutil.rmtree(image_path)
         if not os.path.exists(image_path):
             os.makedirs(image_path)
 

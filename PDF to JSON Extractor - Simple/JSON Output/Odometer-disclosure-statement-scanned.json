@@ -1,0 +1,36 @@
+{
+    "Page 1": {
+        "Header": "ODOMETER DISCLOSURE STATEMENT (for use in motor vehicle ownership transfers)",
+        "Sections": {
+            "Important Notice": {
+                "Content": "Federal and State Law requires a statement of ownership of the current mileage of the motor vehicle in a transfer of ownership transaction. Failure to complete this disclosure, or providing a false statement of mileage on this disclosure, may result in serious penalties, which may include fines or imprisonment."
+            },
+            "Seller Information": {
+                "Name": "Michael Kent",
+                "Certification": "certify to the best of my knowledge the current odometer reading of the following vehicle:"
+            },
+            "Vehicle Information": {
+                "Make": "Ford",
+                "Model": "Fusion",
+                "Body Type": "sedan",
+                "Year": "2012",
+                "Color": "graphite",
+                "VIN": "4Y1SL65848Z411439"
+            },
+            "Odometer Information": {
+                "Odometer Reading": "87,370",
+                "Statement": "The odometer reading listed above is a true and correct representation of the current mileage on the vehicle."
+            },
+            "Seller Acknowledgment": {
+                "Signature": "Michael Kent",
+                "Date": "October 10th, 2020",
+                "Printed Name": "Michael Kent"
+            },
+            "Buyer Acknowledgment": {
+                "Signature": "NiLo",
+                "Date": "October 10th, 2020",
+                "Printed Name": "Nickolas Laurens"
+            }
+        }
+    }
+}

@@ -46,18 +46,12 @@ Pick the program you wish to experiment with to best serve your needs.
             Total cost: $0.62
 
 
-    Total elapsed time: 4 minutes 36 seconds
-    Total token usage for each model:
-        GPT-4-Vision Preview:
-            Prompt tokens: 37542
-            Completion tokens: 8014
-            Total tokens: 45556
-
 # Optimizations:
 
 Here are some ways to optimize the OCR capabilities of GPT-4 Vision:
 
 ## 1) JSON Schema
+
 * Supplying a JSON schema can improve consistency.
 
 * Use a small, yet concise JSON schema. The larger the schema, the more fields to search for and fill, thus the model will take longer to return a response.
@@ -68,7 +62,11 @@ Here are some ways to optimize the OCR capabilities of GPT-4 Vision:
 
 * The schema should cover field names, data types, and any constraints (e.g., required fields).
 
+* Add context within the schema for each field i.e: Ailments (Mark 1 to 2 Items):, or
+Gender (M, F, X):
+
 ## 2) Prompt Engineering
+
 * Use a more specific prompt to get the best results from the model.
 
 * Suggest providing the model with a schema and prompt specific to the type of document being processed.
@@ -82,16 +80,22 @@ Here are some ways to optimize the OCR capabilities of GPT-4 Vision:
 
 * Adjust the pre-processing of the images to optimize for OCR.
 
+* Could Remove sections, or entire pages that you know are not where the answers are. i.e, if you know the answers are only on the first 7 pages of a 40 page document.
+
 * Can adjust the pdf to image conversion DPI, too low and there won't be enough detail, too high and it's unnecessarily expensive to process with the LLM model.
 
 * Can adjust the image pre-processing techniques to improve the quality of the text extracted from the images when it's processed by the model, 
     especially if the images are from a scanned pdf: i.e Remove Noise, Sharpen, Contrast, etc.
 
+* Could Remove sections, or entire pages that you know are not where the answers are. i.e, if you know the answers are only on the first 7 pages of a 40 page document.
+
 ## 4) Image Batch Size
 
+* A schema will define the desired output size, so ensure the schema is below 4096 tokens itself.
+
+* Currently the max output tokens is 4096 tokens for GPT-4 Vision Preview.
+
 * Try to get the image batch size for GPT 4 Vision as close to 10 as possible without sacrificing the quality of the output. This ensures PDF's with large amounts of pages get processed as quickly as possible. 
-    
-* Max output tokens is 4096 tokens.
 
 * Would need to create an image token estimation function to estimate the number of tokens for each image.
 
@@ -101,7 +105,6 @@ Here are some ways to optimize the OCR capabilities of GPT-4 Vision:
 
 * Also, depending on the system context, prompt and its settings (Temperature, Top P), 
     the input tokens will drastically affect the output tokens being returned from the model.
-
 
 # GPT-4 Vision & GPT-4 Turbo
 

@@ -40,7 +40,7 @@ class Utilities:
             Inspired from: https://www.reveation.io/blog/automated-bank-statement-analysis/
     '''
     @staticmethod
-    def preprocess_image_for_ocr(image_path, output_path):
+    def preprocess_image_for_ocr(image_path):
         print(f"Preprocessing image for OCR: {image_path}")
         # Load the image
         image = cv2.imread(image_path, cv2.IMREAD_COLOR)
@@ -53,6 +53,12 @@ class Utilities:
 
         # Gaussian adaptive thresholding
         # binary = cv2.adaptiveThreshold(gray, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY, 11, 2)
+
+        # Auto-rotate using pytesseract (https://pypi.org/project/pytesseract/)
+        # img = cv2.imread(image)
+        # k = pytesseract.image_to_osd(img)
+        # out = {i.split(":")[0]: float_convertor(i.split(":")[-1].strip()) for i in k.rstrip().split("\n")}
+        # img_rotated = ndimage.rotate(img, 360-out["Rotate"])
 
         # Convert NumPy array back to PIL Image
         enhanced_image = Image.fromarray(gray)
@@ -128,3 +134,11 @@ class Utilities:
         minutes = int(elapsed_time // 60)
         seconds = int(elapsed_time % 60)
         print(f"Total elapsed time: {minutes} minutes {seconds} seconds")
+
+    @staticmethod
+    def float_convertor(x):
+        if x.isdigit():
+            out= float(x)
+        else:
+            out= x
+        return out 

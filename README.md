@@ -124,8 +124,6 @@ So, if your primary requirement is to get structured JSON output, GPT-4 Turbo wi
 
 If your main objective is to do both, then something you might do is allow GPT-4 Vision to convert the images to markdown, and then allow GPT-4 Turbo to convert this markdown to JSON.
 
-> Source: Conversation with Bing, 2/23/2024
-
 [^1]: [How to use the GPT-4 Turbo with Vision model - Azure OpenAI Service](https://learn.microsoft.com/en-us/azure/ai-services/openai/how-to/gpt-with-vision)
 [^2]: [Extracting Structured Data from Images Using OpenAI’s gpt-4 ... - Medium](https://medium.com/@foxmike/extracting-structured-data-from-images-using-openais-gpt-4-vision-and-jason-liu-s-instructor-ec7f54ee0a91)
 [^3]: [Experimenting with GPT-4 Turbo’s JSON Mode: A New Era in AI ... - Medium](https://medium.com/@vishalkalia.er/experimenting-with-gpt-4-turbos-json-mode-a-new-era-in-ai-data-structuring-58d38409f1c7)

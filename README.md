@@ -136,5 +136,6 @@ If your main objective is to do both, then something you might do is allow GPT-4
 [^10]: [undefined](https://api.openai.com/v1/chat/completions)
 [^11]: [undefined](https://platform.openai.com/docs/models/gpt-4-and-gpt-4-turbo)
 
-License
-This project is licensed under the terms of the MIT license.
+## License
+
+This project is licensed under the [MIT License](LICENSE).

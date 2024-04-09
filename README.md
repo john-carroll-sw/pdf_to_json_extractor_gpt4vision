@@ -1,8 +1,8 @@
 # GPT-4 Vision Field Extractor - Converts PDFs to JSON using schema
 
-Large Language Models (LLMs) have the potential to transform the way we access and use data from legacy documents (like PDFs or Word files). They serve as a bridge connecting the past with the present, empowering organizations to fully leverage their historical records.
+Large Language Models (LLMs) like GPT-4 Vision Preview have the potential to revolutionize how we access and utilize data from legacy documents such as PDFs or Word files. This GitHub repository is dedicated to a project that explores the **viability** of using GPT-4 Vision Preview as an OCR (Optical Character Recognition) option.
 
-This repository contains implementations of a field extractor for taking PDF documents to output JSON using OpenAI's GPT-4 Vision Preview, offering flexibility to either generate a new JSON object or populate an existing schema. This functionality can be particularly useful for organizations looking to digitize their data, streamline their workflows, and unlock the full potential of their document archives.
+This repository contains implementations of a field extractor for taking PDF documents to output JSON using OpenAI's GPT-4 Vision Preview, offering flexibility to either generate a new JSON object or populate an existing schema. This functionality empowers organizations to fully leverage their historical records, digitize their data, streamline their workflows, and unlock the full potential of their document archives.
 
 ## Implementation 1: Simple PDF to JSON
 
